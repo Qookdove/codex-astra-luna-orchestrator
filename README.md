@@ -27,13 +27,13 @@ Edit `.codex/config.toml`:
 
 ```toml
 model = "gpt-6-astra"
-model_reasoning_effort = "high"
+model_reasoning_effort = "low"
 
 [agents]
 enabled = true
 max_concurrent_threads_per_session = 6
 default_subagent_model = "gpt-5.6-luna"
-default_subagent_reasoning_effort = "medium"
+default_subagent_reasoning_effort = "max"
 ```
 
 Each role file is also explicitly pinned to Luna. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
