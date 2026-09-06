@@ -1,6 +1,6 @@
 # Codex Astra Orchestrator + Luna Subagents
 
-A configurable Codex setup where GPT-6 Astra is the root/orchestrator and GPT-5.6 Luna is the default and pinned model for specialized subagents.
+A configurable Codex setup where GPT-6 Astra is the root/orchestrator and reviewer, while GPT-5.6 Luna is the default and pinned model for execution subagents.
 
 ## Layout
 
@@ -36,14 +36,9 @@ default_subagent_model = "gpt-5.6-luna"
 default_subagent_reasoning_effort = "max"
 ```
 
-Each role file is also explicitly pinned to Luna. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
+Each role file is explicitly pinned to its intended model: Luna for explorer, worker, tester, and researcher; Astra for reviewer. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
 
-If you want one knob to control all subagents, remove these two lines from each `.codex/agents/*.toml` file:
-
-```toml
-model = "gpt-5.6-luna"
-model_reasoning_effort = "medium"
-```
+If you want one knob to control all subagents, remove the `model` and `model_reasoning_effort` overrides from each `.codex/agents/*.toml` file.
 
 Then the named roles inherit the `[agents]` defaults.
 
@@ -121,7 +116,7 @@ and reviewer for an independent final review.
             Luna
               |
           reviewer
-            Luna
+           Astra
               |
               v
          GPT-6 Astra
@@ -149,4 +144,4 @@ For strict parent/child separation:
 
 Explicit model choices during a spawn override `[agents]` defaults. Custom agent files that specify `model` or `model_reasoning_effort` also take precedence over inherited defaults.
 
-The included role files are pinned to Luna intentionally, so Astra should remain the orchestrator unless you deliberately change the role configuration.
+The execution role files are pinned to Luna intentionally, while the reviewer is pinned to Astra for independent final review. Astra remains the orchestrator unless you deliberately change the role configuration.
