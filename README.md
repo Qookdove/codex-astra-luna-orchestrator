@@ -18,7 +18,10 @@ A configurable Codex setup where GPT-6 Astra is the root/orchestrator and review
 │   └── skills/
 │       └── astra-orchestrator/
 │           └── SKILL.md
-└── AGENTS.md
+├── AGENTS.md
+├── setup.sh
+├── setup.ps1
+└── LICENSE
 ```
 
 ## Main configuration knobs
@@ -42,19 +45,73 @@ If you want one knob to control all subagents, remove the `model` and `model_rea
 
 Then the named roles inherit the `[agents]` defaults.
 
-## Recommended install: project scoped
+## Project setup
 
-Copy all three project items into the root of your repository:
+Clone this repository:
 
 ```bash
-cp -R .codex /path/to/your/repo/
-cp -R .agents /path/to/your/repo/
-cp AGENTS.md /path/to/your/repo/AGENTS.md
+git clone https://github.com/donvito/codex-astra-luna-orchestrator.git
+cd codex-astra-luna-orchestrator
 ```
 
-Launch Codex from that repository.
+The target project must already exist and must be different from this setup
+repository.
 
-Project-scoped `.codex` configuration is only loaded for trusted projects.
+### macOS and Linux
+
+Run the shell installer:
+
+```bash
+./setup.sh
+```
+
+### Windows
+
+Run the PowerShell installer from Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+With PowerShell 7, you can use:
+
+```powershell
+pwsh -File .\setup.ps1
+```
+
+### Installer prompts
+
+When asked for the target repository, enter its absolute or relative path. For
+example:
+
+```text
+Target repository path: ../my-project
+```
+
+The installer then asks whether to install each component:
+
+- `.codex` contains the root configuration and agent role profiles.
+- `.agents` contains the `astra-orchestrator` skill.
+- `AGENTS.md` gives Codex the project-level orchestration instructions.
+
+Press Enter or answer `y` to install a component; answer `n` to skip it. All
+three components are selected by default.
+
+If a component already exists, the installer lists the exact paths that would
+be overwritten and asks again before making changes:
+
+```text
+WARNING: the following existing files will be overwritten:
+  - .codex/config.toml
+Update .codex? New files will be added; only paths listed above will be replaced. [y/N]
+```
+
+Existing-file updates default to `n`. If approved, missing files are added and
+only the listed paths are replaced. Other files already present in the target
+component remain untouched.
+
+After setup, launch Codex from the target repository. Project-scoped `.codex`
+configuration is loaded only for trusted projects.
 
 ## Personal/global setup
 
@@ -145,3 +202,7 @@ For strict parent/child separation:
 Explicit model choices during a spawn override `[agents]` defaults. Custom agent files that specify `model` or `model_reasoning_effort` also take precedence over inherited defaults.
 
 The execution role files are pinned to Luna intentionally, while the reviewer is pinned to Astra for independent final review. Astra remains the orchestrator unless you deliberately change the role configuration.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
