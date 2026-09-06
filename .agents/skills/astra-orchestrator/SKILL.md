@@ -1,6 +1,6 @@
 ---
 name: astra-orchestrator
-description: Orchestrate complex Codex coding work with the root agent as planner/integrator and specialized Luna subagents for exploration, implementation, testing, review, and research. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
+description: Orchestrate complex Codex coding work with the root agent as planner/integrator, Luna subagents for exploration, implementation, testing, and research, and an Astra reviewer. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
 ---
 
 # Astra Orchestrator
@@ -17,7 +17,7 @@ The expected default topology is:
 - explorer: GPT-5.6 Luna
 - worker: GPT-5.6 Luna
 - tester: GPT-5.6 Luna
-- reviewer: GPT-5.6 Luna
+- reviewer: GPT-6 Astra
 - researcher: GPT-5.6 Luna
 
 Do not override a Luna subagent to a more expensive model unless the user explicitly asks for that escalation.
