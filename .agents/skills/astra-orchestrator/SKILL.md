@@ -1,426 +1,293 @@
 ---
 name: astra-orchestrator
-description: Orchestrate complex Codex coding work with the root agent as planner/integrator, Luna subagents for exploration, implementation, testing, and research, and an Astra reviewer. Use for multi-file features, debugging across components, repo-wide changes, parallelizable workstreams, or whenever the user asks to delegate or use subagents. Do not use for trivial one-file edits or simple questions.
+description: Orchestrate substantial Codex work with a root architect, dynamically routed Sol/Terra/Luna subagents, bounded role contracts, fresh review, and measured verification. Use for multi-file features, cross-component debugging, repo-wide changes, research-heavy work, or explicit delegation. Do not use for trivial localized edits.
 ---
 
-# Astra Orchestrator
+# Astra Orchestrator — hybrid routing
 
 The user's explicit instructions take precedence over this skill.
 
 ## Goal
 
-Use the root agent as the high-quality orchestrator.
+Preserve the original orchestrator's strengths — project-scoped configuration, bounded roles, concurrency limits, installer compatibility, and token telemetry — while using dynamic capability routing instead of hard-wiring every subagent to one model.
 
-Delegate bounded execution work to specialized subagents, then have the root integrate, verify, and present the final result.
+The parent session owns:
 
-The expected default topology is:
+1. intent and constraints
+2. architecture and decomposition
+3. delegation decisions
+4. model/effort routing
+5. integration
+6. parent-side verification
+7. acceptance
 
-- root: GPT-6 Astra (Pro plan) or GPT-5.6 Luna at max reasoning (Plus plan)
-- explorer: GPT-5.6 Luna
-- worker: GPT-5.6 Luna
-- tester: GPT-5.6 Luna
-- reviewer: GPT-6 Astra
-- researcher: GPT-5.6 Luna
+Named agent roles define **behavior**, not model choice. Do not assume a role TOML pins model, reasoning effort, or sandbox permissions.
 
-Use Luna for all routine subagent execution.
+## Parent modes
 
-This is a requirement, not a preference.
+- Pro profile: GPT-6 Astra is the preferred root architect.
+- Plus profile: the configured Luna root is a compatibility/degraded-cost profile; do not falsely claim Astra root orchestration.
+- Never change the parent model or effort from inside the skill.
+- If runtime metadata exposes the parent model/effort, report what is observed. If it does not, say `unobservable` rather than inventing confirmation.
 
-Only the reviewer uses Astra by default.
+## Capability preflight
 
-Do not override a Luna subagent to a more expensive model unless the user explicitly asks for escalation or a Luna worker reports that the task requires higher-level reasoning.
+Before substantive delegation:
 
----
+1. inspect the live `spawn_agent` / collaboration schema if available
+2. determine which model and reasoning controls are actually exposed
+3. treat live tool metadata as authoritative over this document
+4. fail a model-pinned delegation closed if the selected model/effort cannot be requested safely
+5. continue safe parent work when delegation is unavailable
+
+Do not fabricate tools, models, effort levels, runtime confirmation, or permission isolation.
 
 ## Delegation gate
 
-Before doing substantive repository work, classify the task as either:
+Classify the work as `root-only` or `delegated`.
 
-- root-only
-- delegated
+Prefer root-only when the task is small, localized, sequential, or cheaper to finish directly than to create another context.
 
-Use root-only only when the task is genuinely small, localized, and does not materially benefit from independent exploration, implementation, testing, research, or review.
+Delegate when a bounded independent deliverable materially improves at least one of:
 
-The task MUST be delegated when at least one of the following is true:
+- parallel progress
+- context isolation
+- repository exploration
+- research quality
+- implementation ownership
+- independent verification
+- review quality
 
-- the task spans multiple files, modules, services, or components
-- there are two or more independent workstreams
-- repository exploration is needed before implementation
-- implementation and verification benefit from separate context
-- debugging requires tracing across components
-- multiple modules or services need inspection
-- external or version-specific facts need verification
-- an independent post-change review is materially useful
-- the user explicitly asks for delegation, parallelism, agents, or subagents
+Do **not** delegate merely because a task touches multiple files. Orchestration has context and rate-limit cost.
 
-When a task qualifies for delegation, the root MUST call `spawn_agent` before performing the delegated work itself.
+When the user explicitly asks for agents/subagents/parallelism, use real delegation if the live tool supports it.
 
-Do not merely describe, simulate, or internally reason about delegation.
+## Dynamic model routing
 
-Actual subagents must be spawned.
+Select the cheapest model that is likely to complete the bounded task without creating enough retries, supervision, or quality risk to erase the saving.
 
-If `spawn_agent` is unavailable or fails, explicitly report that failure.
+Use this as routing guidance, not a fixed role-to-model table:
 
-Do not silently fall back to doing required delegated work in the root thread.
+### GPT-5.6 Luna
 
-For every delegated task, spawn at least one subagent.
+Prefer for:
+- narrow, well-specified edits
+- repetitive or mechanical implementation
+- targeted test execution
+- simple extraction or lookup
+- low-risk bounded tasks with clear acceptance criteria
 
-Do not create subagents solely to satisfy this rule when the task is genuinely root-only.
+Typical effort: `low` or `medium`.
 
----
+### GPT-5.6 Terra
 
-## Root-agent responsibilities
+Prefer for:
+- repository exploration
+- large-file or large-context inspection
+- dependency/configuration tracing
+- documentation and evidence gathering
+- moderately ambiguous analysis where reading dominates writing
 
-The root agent owns:
+Typical effort: `medium` or `high`.
 
-1. understanding the user's actual goal
-2. choosing the architecture and implementation direction
-3. decomposing the task
-4. deciding which tasks can run in parallel
-5. spawning the appropriate subagents
-6. giving each subagent a bounded contract
-7. resolving conflicting subagent findings
-8. integrating changes
-9. reviewing the final diff
-10. running or coordinating final verification
-11. presenting the final result to the user
+### GPT-5.6 Sol
 
-Subagents provide evidence and bounded execution.
+Prefer for:
+- difficult implementation
+- cross-component debugging
+- ambiguous technical reasoning
+- risky refactors with bounded ownership
+- architecture-sensitive implementation below the parent level
+- high-value independent review when Astra subagent use is unavailable or unnecessary
 
-They do not own the overall direction.
+Typical effort: `high` or above only when the live model supports it and task risk justifies it.
 
-The root must not offload architectural ownership to a subagent.
+### GPT-6 Astra
 
----
+Keep Astra primarily at the root on the Pro profile. A fresh Astra reviewer may be used when the live tool supports it and review risk justifies the extra cost, but never assume it is available as a child.
 
-## Spawn policy
-
-When spawning agents, use these models by default:
-
-- explorer: `gpt-5.6-luna`
-- worker: `gpt-5.6-luna`
-- tester: `gpt-5.6-luna`
-- researcher: `gpt-5.6-luna`
-- reviewer: `gpt-6-astra`
-
-The root keeps the model configured in `config.toml`: `gpt-6-astra` on the Pro plan, `gpt-5.6-luna` at max reasoning on the Plus plan. Do not change the root model from within a session.
-
-For every delegated task:
-
-1. call `spawn_agent`
-2. give the agent a descriptive task name using underscores
-3. explicitly specify the intended model
-4. give the subagent a bounded delegation contract
-5. retain the returned task name or identifier
-6. wait for required agents before final synthesis
-
-Do not silently substitute the root agent for a required Luna worker.
-
-Do not spawn Astra workers except for the `reviewer` role unless:
-
-- the user explicitly requests Astra
-- Luna reports a genuinely difficult reasoning blocker
-- the root determines that a high-risk architectural or security review needs Astra
-
-Routine execution should remain on Luna.
-
----
-
-## Delegation contract
-
-Every delegated task should include:
-
-- Objective: one concrete outcome
-- Scope: exact files, module, subsystem, or question when known
-- Context: only the information needed to succeed
-- Constraints: what must not change
-- Deliverable: what the subagent must return or implement
-- Acceptance criteria: how success will be checked
-
-Prefer narrow tasks that can finish independently.
-
-Bad:
-
-> Fix the backend.
-
-Good:
-
-> Trace where POST /invoices validates currency. Return the responsible files, validation path, and existing tests. Do not edit files.
-
-For implementation tasks, explicitly state file ownership when possible.
-
-For exploration tasks, tell the agent not to edit files.
-
-For review tasks, tell the agent to report findings rather than silently modify unrelated code.
-
----
+Escalate only after evidence: task ambiguity, failed lower-tier attempt, safety/security risk, architectural uncertainty, or high-cost failure potential.
 
 ## Role selection
 
-Use `explorer` for:
+Use named roles for bounded behavior contracts:
 
-- repository mapping
-- tracing execution or data flow
-- locating symbols and tests
-- dependency inspection
-- configuration inspection
-- identifying implementation boundaries
+- `explorer`: map repository/data/control flow; no edits
+- `researcher`: verify external/version-specific facts; no application-code edits
+- `worker`: bounded implementation
+- `tester`: reproduction and targeted verification; edit tests only when explicitly delegated
+- `reviewer`: fresh-context review; no edits
 
-Use `worker` for:
+Model and effort are selected independently from the role.
 
-- bounded implementation
-- small refactors with explicit scope
-- targeted fixes
-- adding requested code
-- modifying clearly owned files
+## Delegation contract
 
-Use `tester` for:
+Every delegated task should specify:
 
-- reproduction
-- targeted test execution
-- validation
-- regression checks
-- adding tests when requested or clearly required by the task
-
-Use `reviewer` for:
-
-- independent post-change review
-- correctness checks
-- security review
-- regression analysis
-- missing-test analysis
-- architectural consistency checks
-
-Use `researcher` for:
-
-- current API or framework behavior
-- dependency or version questions
-- primary documentation verification
-- external compatibility questions
-
----
-
-## Parallelism
-
-Run independent tasks in parallel.
-
-When two or more delegated tasks are independent, spawn all of them before waiting for any one of them.
-
-Good parallel set:
-
-1. spawn backend explorer
-2. spawn frontend explorer
-3. spawn API researcher
-4. wait for all three
-5. synthesize findings
-
-Do not do this:
-
-1. spawn backend explorer
-2. wait
-3. spawn frontend explorer
-4. wait
-5. spawn researcher
-6. wait
-
-unless later tasks genuinely depend on earlier results.
-
-Good parallel examples:
-
-- explorer maps backend path
-- explorer maps frontend path
-- researcher verifies external API behavior
-
-Serialize dependent work:
-
-1. explore
-2. decide architecture
-3. implement
-4. test
-5. review
-6. fix material findings
-7. final verification
-
-Do not send multiple workers to edit the same files unless the root explicitly coordinates ownership.
+- **Objective**: one concrete outcome
+- **Scope**: exact files/module/subsystem/question when known
+- **Context**: only what is needed to succeed
+- **Constraints**: what must not change
+- **Deliverable**: what to return or implement
+- **Acceptance criteria**: how success will be checked
 
 Prefer one writer per file or subsystem.
 
----
+If the task expands into architecture, public API/schema changes, a new dependency, security-sensitive behavior, or another worker's ownership, stop expanding scope and return the decision to the parent.
 
-## Default coding workflow
+## Context policy
 
-For non-trivial implementation tasks, prefer this sequence:
+For native multi-agent V2 delegation, prefer:
 
-1. spawn one or more Luna explorers if repository understanding is needed
-2. wait for exploration results
-3. root decides implementation direction
-4. spawn Luna worker or workers with bounded ownership
-5. wait for implementation
-6. spawn Luna tester
-7. wait for validation
-8. spawn Astra reviewer when an independent review is materially useful
-9. resolve material findings
-10. run final verification
-11. present the result
+`fork_turns: "none"`
+
+and pass the bounded context explicitly in the delegation contract.
+
+Use a positive recent-turn count only when recent conversational state is genuinely necessary. Use `fork_turns: "all"` only when the child truly requires the entire parent conversation.
+
+Rationale: full-history forks duplicate parent context into each child and can materially increase usage.
+
+## Spawn contract
+
+When the live tool supports these controls, each delegation should request:
+
+- descriptive `task_name`
+- `agent_type` for the behavior role
+- explicit `model`
+- explicit `reasoning_effort`
+- `fork_turns: "none"` by default
+- a bounded message containing the delegation contract
+
+Requested values are not proof of realized runtime values. If runtime metadata exposes actual model/effort, keep requested and observed values separate. If unobservable, say so.
+
+## Parallelism
+
+Run independent work in parallel; serialize dependent work.
+
+Good:
+1. explorer maps backend
+2. researcher verifies external API behavior
+3. explorer maps frontend
+4. parent synthesizes
+5. bounded implementation
+6. verification
+
+Do not:
+- spawn multiple writers for the same files without explicit ownership boundaries
+- duplicate the same implementation in parent and child
+- exceed the configured concurrency ceiling merely because more subtasks exist
+
+The repository default ceiling is intentionally conservative. Raise it only after measuring the actual workload.
+
+## Default substantial-work flow
+
+1. capability preflight
+2. inspect repository and classify risk
+3. decide root-only vs delegated
+4. if useful, spawn bounded exploration/research in parallel
+5. parent chooses architecture and integration boundary
+6. route implementation tasks dynamically
+7. parent inspects accumulated changes
+8. run/re-run the highest-value requested checks
+9. start a **fresh** reviewer context when review is materially useful
+10. resolve verdict
+11. final verification and concise report
 
 Do not spawn every role mechanically.
 
-Use only the roles that materially improve the task.
+## Fresh review protocol
 
-However, once the delegation gate is satisfied, at least one real subagent must be spawned.
+For substantial implementation, the parent must inspect the complete accumulated diff and verification evidence before review.
 
----
+The fresh reviewer must not edit files and returns:
 
-## Debugging workflow
+```text
+ASTRA REVIEW
+VERDICT: ship | fix-first | rethink
+REASON: <evidence-based reason>
+FINDINGS: <precise findings or none>
+RESIDUAL RISK: <remaining risk or none>
+```
 
-For cross-component bugs:
+Interpretation:
 
-1. spawn explorers for independent suspected areas
-2. reproduce the issue when possible
-3. collect evidence before selecting a fix
-4. root determines the likely root cause
-5. assign a bounded Luna worker to implement the fix
-6. assign Luna tester to reproduce the original failure and validate the fix
-7. use Astra reviewer for high-risk or non-obvious fixes
+- `ship`: reviewer found no material blocker; parent may accept after its own checks
+- `fix-first`: correct the issue, re-run verification, then obtain a fresh review
+- `rethink`: architecture or assumptions are materially wrong; revise the plan before continuing
 
-Do not let multiple workers independently attempt competing fixes unless the root intentionally requests alternative approaches.
+A reviewer verdict never replaces parent acceptance.
 
----
+## Verification
 
-## Research workflow
+Before claiming completion, the parent should verify the highest-value applicable checks:
 
-When current or version-specific external information matters:
+- final diff inspection
+- syntax/type checks
+- targeted unit tests
+- integration tests
+- build success
+- original reproduction path
+- configuration compatibility
+- unintended-change review
 
-1. spawn a Luna researcher
-2. require primary or authoritative sources when possible
-3. return concise findings and compatibility implications
-4. let the root decide how those findings affect implementation
+State any validation that could not be performed.
 
-Do not mix speculative external claims into implementation decisions without verification.
-
----
+Do not make tests pass by hiding structural integration problems.
 
 ## Cost and context discipline
 
-Use Luna for routine subagent execution.
+Keep parent context focused on:
 
-Keep the root context focused on:
-
-- architectural decisions
+- architecture decisions
 - summarized evidence
 - important diffs
 - test results
 - reviewer findings
 - unresolved risks
 
-Do not paste large raw logs or entire files back into the root when a concise evidence summary is enough.
+Subagents should return concise conclusions, paths/symbols, commands, test results, and blockers instead of large raw logs.
 
-Subagents should return:
+Use `scripts/token_usage.py` after representative runs to measure:
 
-- conclusions
-- relevant file paths
-- important line or symbol references
-- commands run
-- test results
-- risks or blockers
+- per-thread/model usage
+- uncached vs cached input
+- output/reasoning tokens
+- wall time
+- 5-hour and 7-day rate-limit deltas when recorded
 
-Avoid returning large amounts of irrelevant raw output.
-
----
-
-## Escalation behavior
-
-A subagent should report back instead of expanding scope when it encounters:
-
-- an architectural decision
-- a breaking API or schema change
-- a new dependency
-- a security-sensitive design choice
-- unclear requirements with materially different outcomes
-- unexpected changes outside its assigned scope
-- changes that affect another worker's ownership
-- a blocker that requires substantially broader reasoning
-
-The root decides what to do next.
-
-Luna should not independently escalate itself to a more expensive model.
-
-The root owns model escalation decisions.
-
----
+If an API-equivalent price scenario is produced, label it separately from ChatGPT subscription usage. Same-token repricing is not evidence of actual all-Astra consumption or net subscription savings.
 
 ## Failure handling
 
 If a subagent fails:
 
 1. inspect the failure reason
-2. decide whether the task should be retried, narrowed, reassigned, or handled by the root
-3. do not silently ignore the failed delegation
-4. do not claim the delegated work completed successfully
+2. retry only if the cause is transient or the contract can be narrowed
+3. reroute model/effort only when evidence justifies escalation
+4. do not silently ignore the failed delegation
+5. do not claim success for work that was not verified
 
-If `spawn_agent` itself fails, explicitly note the failure.
+If spawning itself is unavailable, report the limitation and continue root-only when safe.
 
-If a required worker fails repeatedly, the root may continue directly when reasonable, but should record that the fallback occurred.
+## User-facing reporting
 
----
+Do not narrate every internal action unless the user requests orchestration visibility.
 
-## Delegated-task completion gate
+For substantial routed work, a compact route summary is enough:
 
-Before producing the final answer for a delegated task, confirm that:
+```text
+ROUTE
+parent: <observed/unobservable model + effort>
+delegation: <selected tasks/models/efforts or none>
+risk: <short rationale>
+```
 
-- every required subagent was actually spawned
-- every required subagent either completed or explicitly failed
-- material findings were integrated
-- conflicting findings were resolved
-- required verification was performed
-- no required agent is still running
-
-Do not finish while required subagents are still running.
-
-Do not claim delegation occurred unless `spawn_agent` was actually called successfully.
-
----
-
-## Final verification
-
-Before claiming completion, the root should:
-
-1. inspect the final diff
-2. confirm the requested behavior is actually implemented
-3. check material reviewer findings
-4. run or confirm the highest-value tests
-5. verify that delegated results were integrated correctly
-6. state any validation that could not be performed
-
-For implementation tasks, prefer checking:
-
-- syntax or type checks
-- targeted unit tests
-- integration tests where relevant
-- build success where relevant
-- the original reproduction path
-- final diff for unintended changes
-
----
-
-## User-facing behavior
-
-Do not narrate every subagent action unless the user asks for detailed orchestration visibility.
-
-The final answer should focus on:
+Final answers should focus on:
 
 - what changed
 - what was verified
-- important findings
-- remaining risks or limitations
+- material findings
+- remaining risks/limitations
+- measured usage only when available
 
-When useful, briefly mention which agents contributed.
-
-If the user explicitly asks to see delegation, report:
-
-- subagent name
-- model
-- assigned task
-- completion status
-
-Do not claim a Luna agent was used unless the trace contains a successful `spawn_agent` call using `gpt-5.6-luna`.
+Never claim a specific child model, effort, permission state, or delegation occurred unless runtime evidence supports that claim.
