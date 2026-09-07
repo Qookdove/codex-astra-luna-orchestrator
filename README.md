@@ -34,9 +34,9 @@ model_reasoning_effort = "low"
 
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 6
+max_concurrent_threads_per_session = 4
 default_subagent_model = "gpt-5.6-luna"
-default_subagent_reasoning_effort = "max"
+default_subagent_reasoning_effort = "medium"
 ```
 
 Each role file is explicitly pinned to its intended model: Luna for explorer, worker, tester, and researcher; Astra for reviewer. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
