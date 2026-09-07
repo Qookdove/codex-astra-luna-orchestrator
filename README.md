@@ -2,12 +2,15 @@
 
 A configurable Codex setup where GPT-6 Astra is the root/orchestrator and reviewer, while GPT-5.6 Luna is the default and pinned model for execution subagents.
 
+The installer asks which Codex plan you are on. Pro installs the Astra root described above. Plus installs a variant where the root is GPT-5.6 Luna at max reasoning, which keeps orchestrated sessions within the Plus rate-limit windows. Subagent roles are identical on both plans, including the reviewer, which stays on GPT-6 Astra so the final review is always done by a different model than the one that wrote the code.
+
 ## Layout
 
 ```text
 .
 ├── .codex/
-│   ├── config.toml
+│   ├── config.toml         (Pro: Astra root)
+│   ├── config.plus.toml    (Plus: Luna max root; installed as config.toml)
 │   └── agents/
 │       ├── explorer.toml
 │       ├── worker.toml
@@ -18,6 +21,15 @@ A configurable Codex setup where GPT-6 Astra is the root/orchestrator and review
 │   └── skills/
 │       └── astra-orchestrator/
 │           └── SKILL.md
+├── guides/
+│   ├── fast-iteration.md
+│   ├── complex-repo-work.md
+│   ├── routine-coding.md
+│   ├── full-orchestration.md
+│   ├── plus-plan.md
+│   └── token-usage.md
+├── scripts/
+│   └── token_usage.py
 ├── AGENTS.md
 ├── setup.sh
 ├── setup.ps1
@@ -38,6 +50,16 @@ max_concurrent_threads_per_session = 4
 default_subagent_model = "gpt-5.6-luna"
 default_subagent_reasoning_effort = "medium"
 ```
+
+`.codex/config.plus.toml` is the same file with a Luna root:
+
+```toml
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+```
+
+The installer writes whichever one matches your plan to `.codex/config.toml`
+in the target repository; `config.plus.toml` itself is never installed.
 
 Each role file is explicitly pinned to its intended model: Luna for explorer, worker, tester, and researcher; Astra for reviewer. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
 
@@ -88,6 +110,19 @@ example:
 Target repository path: ../my-project
 ```
 
+Next, choose your Codex plan:
+
+```text
+Codex plan:
+  1) Pro  - GPT-6 Astra orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews
+  2) Plus - GPT-5.6 Luna (max reasoning) orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews
+Select plan [1/2] (default 1):
+```
+
+This only affects which root configuration is written to `.codex/config.toml`.
+Agent role files are the same on both plans: explorer, worker, tester, and
+researcher run on Luna; the reviewer runs on Astra on Plus as well.
+
 The installer then asks whether to install each component:
 
 - `.codex` contains the root configuration and agent role profiles.
@@ -113,6 +148,11 @@ component remain untouched.
 After setup, launch Codex from the target repository. Project-scoped `.codex`
 configuration is loaded only for trusted projects.
 
+See `guides/` for copy-paste model presets and the Astra + Luna topology. The
+guides are intentionally separate from the installers so you can review and
+adapt settings for your Codex version without changing a global config
+automatically.
+
 ## Personal/global setup
 
 For agents, copy the TOML files to:
@@ -127,7 +167,8 @@ For the skill, copy the skill folder to:
 ~/.agents/skills/astra-orchestrator/
 ```
 
-Merge the settings from `.codex/config.toml` into your existing:
+Merge the settings from `.codex/config.toml` (Pro) or `.codex/config.plus.toml`
+(Plus) into your existing:
 
 ```text
 ~/.codex/config.toml
@@ -196,6 +237,33 @@ For strict parent/child separation:
 - keep explorer/reviewer/researcher read-only
 - keep worker/tester workspace-write
 - leave the root in workspace-write so it can integrate changes
+
+## Token usage
+
+Orchestration is not free: the root stays in the loop for the whole task and
+every subagent carries its own context. Usage depends on repository size and
+task shape, so there is no single number. `scripts/token_usage.py` reads the
+rollout logs Codex already writes under `~/.codex/sessions` and reports usage
+per thread, role, and model, plus the change in your 5-hour and 7-day rate
+limit windows:
+
+```bash
+scripts/token_usage.py --list --date 2026-09-07
+scripts/token_usage.py --latest --date 2026-09-07
+```
+
+See [`guides/token-usage.md`](guides/token-usage.md) for a measurement
+protocol, one sample run with real numbers, and tips for reducing usage.
+
+Plus users: the root thread is the largest line item, so running it on Luna
+saves the most. Selecting `Plus` in the installer does this for you; for a
+manual or global setup see [`guides/plus-plan.md`](guides/plus-plan.md):
+
+```toml
+# Root
+model = "gpt-5.6-luna"
+model_reasoning_effort = "max"
+```
 
 ## Important behavior
 
