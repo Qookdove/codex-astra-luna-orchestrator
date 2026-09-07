@@ -1,32 +1,21 @@
-# Codex: Astra orchestrator + Luna subagents
+# Codex hybrid orchestrator configuration (Pro profile)
 #
-# Main knobs to change:
-#   model / model_reasoning_effort
-#   agents.default_subagent_model
-#   agents.default_subagent_reasoning_effort
-#   agents.max_concurrent_threads_per_session
-#
-# This is intentionally project-scoped. Put it at:
-#   <repo>/.codex/config.toml
-#
-# For a personal/global setup, merge the same settings into:
-#   ~/.codex/config.toml
+# Root architecture/acceptance stays on Astra. Named role files define behavior only;
+# the astra-orchestrator skill selects each child model and reasoning effort dynamically.
+# The [agents] defaults below are safe fallbacks for generic spawns that omit explicit routing.
 
-# Root / orchestrator
 model = "gpt-6-astra"
 model_reasoning_effort = "low"
 
-# Safe interactive defaults. Change if your workflow needs otherwise.
 approval_policy = "on-request"
 sandbox_mode = "workspace-write"
 
 [agents]
 enabled = true
 
-# Number of child agent threads Codex may keep open concurrently.
-# Start with 4-6. Increase only when the work is genuinely parallel.
+# Hard safety ceiling. Increase only after measuring a workload that is genuinely parallel.
 max_concurrent_threads_per_session = 4
 
-# Default for any spawned subagent that does not explicitly choose a model.
+# Fallback only. The orchestration skill normally requests model/effort explicitly.
 default_subagent_model = "gpt-5.6-luna"
 default_subagent_reasoning_effort = "medium"
