@@ -6,6 +6,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import py_compile
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -70,6 +71,28 @@ def verify_skill_contract() -> None:
     for needle in required:
         if needle not in text:
             fail(f"SKILL.md missing required integration contract: {needle}")
+
+
+def verify_docs_and_installers() -> None:
+    paths = [
+        ROOT / "README.md",
+        ROOT / "guides" / "full-orchestration.md",
+        ROOT / "guides" / "plus-plan.md",
+        ROOT / "setup.sh",
+        ROOT / "setup.ps1",
+    ]
+    stale = [
+        "Execute with Luna",
+        "GPT-5.6 Luna executes, GPT-6 Astra reviews",
+        "Subagents keep their pinned models",
+    ]
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        for needle in stale:
+            if needle in text:
+                fail(f"{path}: stale fixed-routing wording remains: {needle}")
+
+    subprocess.run(["sh", "-n", str(ROOT / "setup.sh")], check=True)
 
 
 def load_cost_module():
@@ -150,6 +173,7 @@ def main() -> int:
     verify_configs()
     verify_roles()
     verify_skill_contract()
+    verify_docs_and_installers()
     verify_python_syntax()
     verify_cost_smoke()
     print("hybrid orchestrator verification: PASS")
