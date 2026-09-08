@@ -8,6 +8,7 @@ import json
 import py_compile
 import subprocess
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 
@@ -76,8 +77,7 @@ def verify_skill_contract() -> None:
 def verify_docs_and_installers() -> None:
     paths = [
         ROOT / "README.md",
-        ROOT / "guides" / "full-orchestration.md",
-        ROOT / "guides" / "plus-plan.md",
+        *sorted((ROOT / "guides").glob("*.md")),
         ROOT / "setup.sh",
         ROOT / "setup.ps1",
     ]
@@ -85,6 +85,7 @@ def verify_docs_and_installers() -> None:
         "Execute with Luna",
         "GPT-5.6 Luna executes, GPT-6 Astra reviews",
         "Subagents keep their pinned models",
+        "with Luna subagents",
     ]
     for path in paths:
         text = path.read_text(encoding="utf-8")
@@ -92,7 +93,54 @@ def verify_docs_and_installers() -> None:
             if needle in text:
                 fail(f"{path}: stale fixed-routing wording remains: {needle}")
 
+    token_guide = (ROOT / "guides" / "token-usage.md").read_text(encoding="utf-8")
+    root_only_selector = (
+        "scripts/token_usage.py --root <root-session-id-or-unique-prefix> "
+        "--format json > usage.json"
+    )
+    if root_only_selector not in token_guide:
+        fail("guides/token-usage.md must document --root JSON selection for root-only baselines")
+
+    installer_contracts = {
+        ROOT / "setup.sh": "for component in .codex .agents AGENTS.md scripts pricing; do",
+        ROOT / "setup.ps1": "foreach ($component in '.codex', '.agents', 'AGENTS.md', 'scripts', 'pricing')",
+    }
+    for path, needle in installer_contracts.items():
+        text = path.read_text(encoding="utf-8")
+        if needle not in text:
+            fail(f"{path}: installer must package scripts and pricing with project setup")
+
     subprocess.run(["sh", "-n", str(ROOT / "setup.sh")], check=True)
+
+
+def verify_installer_smoke() -> None:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        target = Path(temp_dir) / "target"
+        target.mkdir()
+        answers = f"{target}\n" + "\n" * 6
+        result = subprocess.run(
+            ["sh", str(ROOT / "setup.sh")],
+            input=answers,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            fail(
+                "setup.sh smoke install failed:\n"
+                f"stdout:\n{result.stdout}\n"
+                f"stderr:\n{result.stderr}"
+            )
+
+        required = [
+            ".agents/skills/astra-orchestrator/SKILL.md",
+            "scripts/token_usage.py",
+            "scripts/api_equivalent_cost.py",
+            "pricing/2026-09-04.json",
+        ]
+        for relative in required:
+            if not (target / relative).is_file():
+                fail(f"setup.sh did not install required dependency: {relative}")
 
 
 def load_cost_module():
@@ -141,6 +189,21 @@ def verify_cost_smoke() -> None:
     if result["same_token_astra_usd"] != "0.480000":
         fail(f"unexpected Astra reprice: {result['same_token_astra_usd']}")
 
+    invalid_metadata = (
+        ("schema_version", 2),
+        ("currency", "EUR"),
+        ("unit", "per_thousand_tokens"),
+    )
+    for field, value in invalid_metadata:
+        bad_pricing = dict(pricing)
+        bad_pricing[field] = value
+        try:
+            module.calculate(report, bad_pricing)
+        except ValueError:
+            pass
+        else:
+            fail(f"cost calculator must fail closed on unsupported pricing {field}")
+
     bad = {
         "root": "root",
         "threads": [
@@ -174,6 +237,7 @@ def main() -> int:
     verify_roles()
     verify_skill_contract()
     verify_docs_and_installers()
+    verify_installer_smoke()
     verify_python_syntax()
     verify_cost_smoke()
     print("hybrid orchestrator verification: PASS")
