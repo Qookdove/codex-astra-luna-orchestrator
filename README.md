@@ -179,6 +179,8 @@ The installer asks for the target repository and plan, then offers to install:
 - `.codex` — root configuration and behavioral roles
 - `.agents` — orchestration skill
 - `AGENTS.md` — project-level orchestration policy
+- `scripts` — rollout telemetry and API-equivalent cost tools
+- `pricing` — versioned pricing snapshot used by the cost tool
 
 Existing files are listed before overwrite and updates default to `No`.
 
@@ -199,6 +201,8 @@ For the skill:
 ```
 
 Merge the desired root profile into `~/.codex/config.toml`. Do not blindly overwrite existing MCP servers, providers, permissions, or other settings.
+
+For telemetry and the API-equivalent scenario in a manually configured project, also copy `scripts/` and `pricing/` to that project root. The skill's documented commands use those project-relative paths.
 
 ## Using the skill
 
@@ -258,5 +262,3 @@ See [`guides/token-usage.md`](guides/token-usage.md) and [`guides/hybrid-routing
 ## License
 
 Licensed under the Apache License 2.0.
-
-The hybrid routing design was independently implemented after comparing with the MIT-licensed `DannyMac180/astra-advisor` project. No Astra Advisor source code is vendored here; see the integration guide for the architectural distinctions.
