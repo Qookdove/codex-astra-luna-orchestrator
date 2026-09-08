@@ -220,7 +220,7 @@ select_plan
 stage_codex
 
 installed=0
-for component in .codex .agents AGENTS.md; do
+for component in .codex .agents AGENTS.md scripts pricing; do
     if confirm "Install $component?" yes; then
         if [ "$component" = .codex ]; then
             copy_component "$component" "$staged_codex"
