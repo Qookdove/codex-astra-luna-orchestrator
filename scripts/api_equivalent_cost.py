@@ -21,6 +21,9 @@ from pathlib import Path
 from typing import Any
 
 MILLION = Decimal(1_000_000)
+SUPPORTED_PRICING_SCHEMA_VERSION = 1
+SUPPORTED_PRICING_CURRENCY = "USD"
+SUPPORTED_PRICING_UNIT = "per_million_tokens"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -72,10 +75,34 @@ def q(value: Decimal) -> str:
     return str(value.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP))
 
 
-def calculate(report: dict[str, Any], pricing: dict[str, Any]) -> dict[str, Any]:
+def validate_pricing(pricing: dict[str, Any]) -> dict[str, Any]:
+    schema_version = pricing.get("schema_version")
+    if type(schema_version) is not int or schema_version != SUPPORTED_PRICING_SCHEMA_VERSION:
+        raise ValueError(
+            "unsupported pricing schema_version "
+            f"{schema_version!r}; expected {SUPPORTED_PRICING_SCHEMA_VERSION}"
+        )
+
+    currency = pricing.get("currency")
+    if currency != SUPPORTED_PRICING_CURRENCY:
+        raise ValueError(
+            f"unsupported pricing currency {currency!r}; expected {SUPPORTED_PRICING_CURRENCY!r}"
+        )
+
+    unit = pricing.get("unit")
+    if unit != SUPPORTED_PRICING_UNIT:
+        raise ValueError(
+            f"unsupported pricing unit {unit!r}; expected {SUPPORTED_PRICING_UNIT!r}"
+        )
+
     models = pricing.get("models")
     if not isinstance(models, dict) or "gpt-6-astra" not in models:
         raise ValueError("pricing snapshot must define models including gpt-6-astra")
+    return models
+
+
+def calculate(report: dict[str, Any], pricing: dict[str, Any]) -> dict[str, Any]:
+    models = validate_pricing(pricing)
 
     threads = report.get("threads")
     if not isinstance(threads, list):
