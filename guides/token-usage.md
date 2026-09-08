@@ -22,6 +22,14 @@ scripts/token_usage.py --latest --date 2026-09-07
 scripts/token_usage.py --latest --format json > usage.json
 ```
 
+`--latest` intentionally selects the most recent session that spawned at least one non-guardian subagent, so it cannot select the recommended root-only baseline. For a root-only run, use `--list` to identify the root session id, then select that session explicitly:
+
+```bash
+scripts/token_usage.py --root <root-session-id-or-unique-prefix> --format json > usage.json
+```
+
+Add `--date YYYY-MM-DD` to the `--root` command when you want to limit the scan.
+
 Raw `total_tokens` can be misleading because cached input may dominate. For ChatGPT Plus/Pro operation, the observable 5-hour and 7-day rate-limit deltas are the more useful account-facing signals when present.
 
 ## Hybrid-routing measurement protocol
