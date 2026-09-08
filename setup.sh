@@ -13,8 +13,8 @@ cat <<'BANNER'
 |/_/   \_\____/ |_| |_| \_\/_/   \_\    |
 |                                       |
 |       O R C H E S T R A T O R         |
-|   Plan and orchestrate with Astra.    |
-|          Execute with Luna.           |
+|       Architect with the root.        |
+|       Route bounded work by fit.      |
 +---------------------------------------+
 BANNER
 printf '%s\n' 'Interactive project setup'
@@ -119,8 +119,8 @@ merge_conflicts() {
 
 select_plan() {
     printf '%s\n' 'Codex plan:'
-    printf '%s\n' '  1) Pro  - GPT-6 Astra orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews'
-    printf '%s\n' '  2) Plus - GPT-5.6 Luna (max reasoning) orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews'
+    printf '%s\n' '  1) Pro  - GPT-6 Astra root; bounded children routed dynamically by capability'
+    printf '%s\n' '  2) Plus - GPT-5.6 Luna (max reasoning) root; bounded children routed dynamically when supported'
 
     while :; do
         printf '%s' 'Select plan [1/2] (default 1): '
@@ -220,7 +220,7 @@ select_plan
 stage_codex
 
 installed=0
-for component in .codex .agents AGENTS.md; do
+for component in .codex .agents AGENTS.md scripts pricing; do
     if confirm "Install $component?" yes; then
         if [ "$component" = .codex ]; then
             copy_component "$component" "$staged_codex"
@@ -236,4 +236,4 @@ for component in .codex .agents AGENTS.md; do
 done
 
 printf '\nSetup complete. %s component(s) installed in %s (plan: %s).\n' "$installed" "$target_dir" "$plan"
-printf '%s\n' 'See guides/ for optional Codex model and Fast-mode configurations.'
+printf '%s\n' 'See guides/ for optional Codex model and routing configurations.'

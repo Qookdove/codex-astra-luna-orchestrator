@@ -1,16 +1,61 @@
-# Codex Astra Orchestrator + Luna Subagents
+# Codex Hybrid Astra Orchestrator
 
-A configurable Codex setup where GPT-6 Astra is the root/orchestrator and reviewer, while GPT-5.6 Luna is the default and pinned model for execution subagents.
+A project-scoped Codex orchestration setup that keeps the root agent responsible for architecture and acceptance while dynamically routing bounded subagent work to the cheapest capable model.
 
-The installer asks which Codex plan you are on. Pro installs the Astra root described above. Plus installs a variant where the root is GPT-5.6 Luna at max reasoning, which keeps orchestrated sessions within the Plus rate-limit windows. Subagent roles are identical on both plans, including the reviewer, which stays on GPT-6 Astra so the final review is always done by a different model than the one that wrote the code.
+The integration combines the original Astra/Luna orchestrator's installer, role contracts, concurrency controls, and rollout telemetry with Astra Advisor-style capability routing, explicit context-fork control, fresh review, and evidence-based cost reporting.
+
+## Topology
+
+```text
+                 root architect
+             (Astra on Pro profile)
+                       |
+              capability preflight
+                       |
+              delegation ROI gate
+                       |
+          +------------+------------+
+          |            |            |
+        Luna         Terra          Sol
+      narrow /      explore /     difficult /
+      repetitive     research       high-risk
+          |            |            |
+          +------------+------------+
+                       |
+            bounded behavior role
+        explorer / worker / tester /
+           researcher / reviewer
+                       |
+              integrate + verify
+                       |
+                fresh reviewer
+                       |
+           ship | fix-first | rethink
+                       |
+                  root accepts
+```
+
+Named roles define behavior only. The orchestration skill selects the child model and reasoning effort dynamically from task risk and live Codex capabilities.
+
+## Why this structure
+
+- preserves a strong root architecture/acceptance layer
+- avoids forcing every child onto Luna
+- avoids copying the entire parent history into every child by default
+- retains bounded role contracts and one-writer-per-scope discipline
+- keeps a hard concurrency ceiling
+- separates real ChatGPT/Codex rate-limit telemetry from API-equivalent price scenarios
+- uses a fresh review context before accepting substantial changes
+
+See [`guides/hybrid-routing.md`](guides/hybrid-routing.md) for the integration design and routing policy.
 
 ## Layout
 
 ```text
 .
 ├── .codex/
-│   ├── config.toml         (Pro: Astra root)
-│   ├── config.plus.toml    (Plus: Luna max root; installed as config.toml)
+│   ├── config.toml          # Pro: Astra root
+│   ├── config.plus.toml     # Plus compatibility: Luna max root
 │   └── agents/
 │       ├── explorer.toml
 │       ├── worker.toml
@@ -22,23 +67,23 @@ The installer asks which Codex plan you are on. Pro installs the Astra root desc
 │       └── astra-orchestrator/
 │           └── SKILL.md
 ├── guides/
-│   ├── fast-iteration.md
-│   ├── complex-repo-work.md
-│   ├── routine-coding.md
-│   ├── full-orchestration.md
-│   ├── plus-plan.md
-│   └── token-usage.md
+│   ├── hybrid-routing.md
+│   ├── token-usage.md
+│   └── ...
+├── pricing/
+│   └── 2026-09-04.json
 ├── scripts/
-│   └── token_usage.py
+│   ├── token_usage.py
+│   └── api_equivalent_cost.py
 ├── AGENTS.md
 ├── setup.sh
 ├── setup.ps1
 └── LICENSE
 ```
 
-## Main configuration knobs
+## Root profiles
 
-Edit `.codex/config.toml`:
+### Pro
 
 ```toml
 model = "gpt-6-astra"
@@ -51,226 +96,169 @@ default_subagent_model = "gpt-5.6-luna"
 default_subagent_reasoning_effort = "medium"
 ```
 
-`.codex/config.plus.toml` is the same file with a Luna root:
+The subagent defaults are fallbacks only. The skill normally requests an explicit model and effort for each bounded delegation.
+
+### Plus compatibility profile
 
 ```toml
 model = "gpt-5.6-luna"
 model_reasoning_effort = "max"
 ```
 
-The installer writes whichever one matches your plan to `.codex/config.toml`
-in the target repository; `config.plus.toml` itself is never installed.
+This keeps the long-lived root thread on Luna to reduce rate-limit pressure. It is not Astra-root orchestration and must not be described as such.
 
-Each role file is explicitly pinned to its intended model: Luna for explorer, worker, tester, and researcher; Astra for reviewer. This means changing only `default_subagent_model` will affect generic spawned agents, but not the named roles.
+## Role vs model
 
-If you want one knob to control all subagents, remove the `model` and `model_reasoning_effort` overrides from each `.codex/agents/*.toml` file.
+Role and model are deliberately independent.
 
-Then the named roles inherit the `[agents]` defaults.
+Examples:
+
+- `explorer` + Terra for repository mapping
+- `worker` + Luna for a narrow, well-specified edit
+- `worker` + Sol for difficult cross-component debugging
+- `tester` + Luna for targeted deterministic checks
+- `reviewer` + Sol or another live-supported model for a fresh independent review
+
+The role TOMLs do not pin model, reasoning effort, or sandbox mode. Current Codex role layers preserve parent permissions, so a role instruction such as "do not edit" is a behavior contract rather than proof of OS-level read-only isolation.
+
+## Context policy
+
+Native multi-agent V2 delegation should use:
+
+```text
+fork_turns: "none"
+```
+
+by default and pass only the bounded context needed for the task. Use recent-turn or full-history forks only when the child genuinely needs that conversation state.
+
+## Routing guidance
+
+- **Luna**: narrow, repetitive, low-risk, clear acceptance criteria
+- **Terra**: exploration, large-context inspection, research, dependency/config tracing
+- **Sol**: difficult implementation, ambiguous debugging, architecture-sensitive bounded work, high-value review
+- **Astra**: preferred Pro root architect/acceptance owner; use as a child only when live capabilities expose it and the risk justifies it
+
+Live tool metadata is authoritative. Never silently substitute a model/effort or claim a runtime pin that was not observed.
+
+## Review lifecycle
+
+For substantial implementation:
+
+1. parent inspects the complete accumulated diff
+2. parent reruns the highest-value requested checks
+3. a fresh reviewer receives the actual change set and evidence
+4. reviewer returns `ship`, `fix-first`, or `rethink`
+5. `fix-first` requires correction, re-verification, and a fresh review
+6. `rethink` requires a revised plan
+7. root performs final acceptance
 
 ## Project setup
 
-Clone this repository:
+Clone this repository, then run the installer against a different target repository.
 
-```bash
-git clone https://github.com/donvito/codex-astra-luna-orchestrator.git
-cd codex-astra-luna-orchestrator
-```
-
-The target project must already exist and must be different from this setup
-repository.
-
-### macOS and Linux
-
-Run the shell installer:
+### macOS / Linux
 
 ```bash
 ./setup.sh
 ```
 
-### Windows
-
-Run the PowerShell installer from Windows PowerShell:
+### Windows PowerShell
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
-With PowerShell 7, you can use:
+or with PowerShell 7:
 
 ```powershell
 pwsh -File .\setup.ps1
 ```
 
-### Installer prompts
+The installer asks for the target repository and plan, then offers to install:
 
-When asked for the target repository, enter its absolute or relative path. For
-example:
+- `.codex` — root configuration and behavioral roles
+- `.agents` — orchestration skill
+- `AGENTS.md` — project-level orchestration policy
+- `scripts` — rollout telemetry and API-equivalent cost tools
+- `pricing` — versioned pricing snapshot used by the cost tool
 
-```text
-Target repository path: ../my-project
-```
+Existing files are listed before overwrite and updates default to `No`.
 
-Next, choose your Codex plan:
-
-```text
-Codex plan:
-  1) Pro  - GPT-6 Astra orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews
-  2) Plus - GPT-5.6 Luna (max reasoning) orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews
-Select plan [1/2] (default 1):
-```
-
-This only affects which root configuration is written to `.codex/config.toml`.
-Agent role files are the same on both plans: explorer, worker, tester, and
-researcher run on Luna; the reviewer runs on Astra on Plus as well.
-
-The installer then asks whether to install each component:
-
-- `.codex` contains the root configuration and agent role profiles.
-- `.agents` contains the `astra-orchestrator` skill.
-- `AGENTS.md` gives Codex the project-level orchestration instructions.
-
-Press Enter or answer `y` to install a component; answer `n` to skip it. All
-three components are selected by default.
-
-If a component already exists, the installer lists the exact paths that would
-be overwritten and asks again before making changes:
-
-```text
-WARNING: the following existing files will be overwritten:
-  - .codex/config.toml
-Update .codex? New files will be added; only paths listed above will be replaced. [y/N]
-```
-
-Existing-file updates default to `n`. If approved, missing files are added and
-only the listed paths are replaced. Other files already present in the target
-component remain untouched.
-
-After setup, launch Codex from the target repository. Project-scoped `.codex`
-configuration is loaded only for trusted projects.
-
-See `guides/` for copy-paste model presets and the Astra + Luna topology. The
-guides are intentionally separate from the installers so you can review and
-adapt settings for your Codex version without changing a global config
-automatically.
+Project-scoped `.codex` configuration is loaded only for trusted projects.
 
 ## Personal/global setup
 
-For agents, copy the TOML files to:
+For global agent roles, copy the TOML files to:
 
 ```text
 ~/.codex/agents/
 ```
 
-For the skill, copy the skill folder to:
+For the skill:
 
 ```text
 ~/.agents/skills/astra-orchestrator/
 ```
 
-Merge the settings from `.codex/config.toml` (Pro) or `.codex/config.plus.toml`
-(Plus) into your existing:
+Merge the desired root profile into `~/.codex/config.toml`. Do not blindly overwrite existing MCP servers, providers, permissions, or other settings.
 
-```text
-~/.codex/config.toml
-```
-
-Do not blindly overwrite your existing global config if you already have MCP servers, providers, permissions, or other settings.
+For telemetry and the API-equivalent scenario in a manually configured project, also copy `scripts/` and `pricing/` to that project root. The skill's documented commands use those project-relative paths.
 
 ## Using the skill
 
-Codex may select the skill automatically when the task matches its description.
-
-You can also invoke it explicitly from Codex CLI or the IDE extension with:
-
-```text
-$astra-orchestrator
-```
-
-Example prompt:
+Codex may select the skill automatically for substantial work, or invoke it explicitly:
 
 ```text
 $astra-orchestrator
 
-Implement the new invoice export endpoint.
-Have explorer map the existing invoice/export path first.
-Use workers for bounded implementation, tester for verification,
-and reviewer for an independent final review.
+Implement the invoice export endpoint.
+Inspect the existing path first, route only bounded independent work,
+verify the full diff, and obtain a fresh review before acceptance.
 ```
 
-## Suggested topology
+## Actual usage telemetry
 
-```text
-                 GPT-6 Astra
-             root / orchestrator
-                      |
-      +---------------+---------------+
-      |               |               |
-   explorer          worker         researcher
-     Luna             Luna             Luna
-      |               |
-      +-------+-------+
-              |
-           tester
-            Luna
-              |
-          reviewer
-           Astra
-              |
-              v
-         GPT-6 Astra
-      integrate + verify
-```
-
-## Tuning
-
-For cheaper/faster runs:
-- set Astra reasoning to `medium`
-- set Luna reasoning to `low` or `medium`
-- use 3-4 concurrent threads
-
-For larger codebases:
-- keep Astra at `high`
-- keep Luna at `medium`
-- use 6-8 concurrent threads, only when tasks are actually independent
-
-For strict parent/child separation:
-- keep explorer/reviewer/researcher read-only
-- keep worker/tester workspace-write
-- leave the root in workspace-write so it can integrate changes
-
-## Token usage
-
-Orchestration is not free: the root stays in the loop for the whole task and
-every subagent carries its own context. Usage depends on repository size and
-task shape, so there is no single number. `scripts/token_usage.py` reads the
-rollout logs Codex already writes under `~/.codex/sessions` and reports usage
-per thread, role, and model, plus the change in your 5-hour and 7-day rate
-limit windows:
+Codex rollout files under `~/.codex/sessions` can be aggregated with:
 
 ```bash
 scripts/token_usage.py --list --date 2026-09-07
 scripts/token_usage.py --latest --date 2026-09-07
+scripts/token_usage.py --latest --format json > usage.json
 ```
 
-See [`guides/token-usage.md`](guides/token-usage.md) for a measurement
-protocol, one sample run with real numbers, and tips for reducing usage.
+The report separates uncached input, cached input, output, reasoning tokens, thread/model usage, wall time, and recorded 5-hour / 7-day rate-limit deltas.
 
-Plus users: the root thread is the largest line item, so running it on Luna
-saves the most. Selecting `Plus` in the installer does this for you; for a
-manual or global setup see [`guides/plus-plan.md`](guides/plus-plan.md):
+Raw token totals are not equivalent to plan consumption. Cached input can dominate, and the subscription rate-limit percentage is the better account-facing signal when available.
 
-```toml
-# Root
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+## API-equivalent cost scenario
+
+Using a `token_usage.py` JSON report:
+
+```bash
+scripts/api_equivalent_cost.py usage.json
 ```
 
-## Important behavior
+This applies the versioned pricing snapshot under `pricing/` and reports:
 
-Explicit model choices during a spawn override `[agents]` defaults. Custom agent files that specify `model` or `model_reasoning_effort` also take precedence over inherited defaults.
+- routed API-equivalent estimate
+- the same observed tokens repriced entirely at Astra
+- same-token price difference
 
-The execution role files are pinned to Luna intentionally, while the reviewer is pinned to Astra for independent final review. Astra remains the orchestrator unless you deliberately change the role configuration.
+This is **not** ChatGPT subscription billing, usage credits, measured net savings, or evidence that an all-Astra run would consume the same tokens. Re-verify pricing before using historical rates as current estimates.
+
+## Cost discipline
+
+Orchestration is not free. The root remains alive for the full task, and each child has its own context. Therefore:
+
+- do not orchestrate trivial work
+- keep the default concurrency ceiling conservative
+- prefer `fork_turns: none`
+- keep child reports concise
+- route only work with clear bounded ownership
+- measure representative tasks before increasing parallelism
+
+See [`guides/token-usage.md`](guides/token-usage.md) and [`guides/hybrid-routing.md`](guides/hybrid-routing.md).
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE).
+Licensed under the Apache License 2.0.

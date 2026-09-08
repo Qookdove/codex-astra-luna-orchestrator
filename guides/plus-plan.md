@@ -1,28 +1,22 @@
-# Plus Plan
+# Plus Plan Compatibility Profile
 
-Choose this preset if you are on a Plus plan and want to keep orchestration
-within the 5-hour window. The root runs on Luna at maximum reasoning instead
-of Astra, so the largest thread in the session is on the cheaper model while
-still planning carefully.
+Choose this profile when you want orchestration but need the long-lived root thread to stay on Luna to reduce pressure on the 5-hour window.
 
-The installers (`setup.sh`, `setup.ps1`) ask for your plan and install this
-variant automatically when you select `Plus`; the full file is
-`.codex/config.plus.toml`. For a manual or global setup, add or merge this
-into:
-
-`~/.codex/config.toml`
+The installers (`setup.sh`, `setup.ps1`) install `.codex/config.plus.toml` as the target repository's `.codex/config.toml` when you select `Plus`.
 
 ```toml
-# Root
 model = "gpt-5.6-luna"
 model_reasoning_effort = "max"
+
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "medium"
 ```
 
-Subagents keep their pinned models from `.codex/agents/*.toml`. Explorer,
-worker, tester, and researcher run on Luna. The reviewer stays on GPT-6 Astra
-on the Plus plan too: it is a single, read-only, `low`-effort thread, and it
-gives you an independent review by a different model than the one that
-planned and wrote the change. If you want the whole session on Luna, change
-`model` in `.codex/agents/reviewer.toml` as well.
+This is a compatibility/cost profile, not Astra-root orchestration. Named role files remain model-agnostic. When the live Codex spawn tool exposes explicit model and effort controls, the skill may still route bounded children to Luna, Terra, or Sol according to task risk.
 
-See `token-usage.md` for how to measure the difference on your own tasks.
+Do not assume an Astra reviewer is available on this profile. Reviewer behavior is fixed by the `reviewer` role, while its model is selected from live-supported capabilities and task risk.
+
+Measure the actual result on your account with `scripts/token_usage.py`; do not infer plan consumption from raw token counts alone.

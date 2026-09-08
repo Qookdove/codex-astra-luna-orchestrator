@@ -1,9 +1,5 @@
 name = "worker"
-description = "Implementation subagent for bounded coding tasks. Use after the relevant code path and acceptance criteria are understood."
-
-model = "gpt-5.6-luna"
-model_reasoning_effort = "medium"
-sandbox_mode = "workspace-write"
+description = "Implementation role for a bounded coding task after scope and acceptance criteria are clear."
 
 developer_instructions = """
 You are an implementation subagent.

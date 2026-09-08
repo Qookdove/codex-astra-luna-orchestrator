@@ -14,8 +14,8 @@ $banner = @'
 |/_/   \_\____/ |_| |_| \_\/_/   \_\    |
 |                                       |
 |       O R C H E S T R A T O R         |
-|   Plan and orchestrate with Astra.    |
-|          Execute with Luna.           |
+|       Architect with the root.        |
+|       Route bounded work by fit.      |
 +---------------------------------------+
 '@
 
@@ -52,8 +52,8 @@ function Read-Confirmation {
 
 function Read-Plan {
     [Console]::WriteLine('Codex plan:')
-    [Console]::WriteLine('  1) Pro  - GPT-6 Astra orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews')
-    [Console]::WriteLine('  2) Plus - GPT-5.6 Luna (max reasoning) orchestrates, GPT-5.6 Luna executes, GPT-6 Astra reviews')
+    [Console]::WriteLine('  1) Pro  - GPT-6 Astra root; bounded children routed dynamically by capability')
+    [Console]::WriteLine('  2) Plus - GPT-5.6 Luna (max reasoning) root; bounded children routed dynamically when supported')
 
     while ($true) {
         [Console]::Write('Select plan [1/2] (default 1): ')
@@ -325,7 +325,7 @@ try {
     $stagedCodex = New-StagedCodex -Plan $plan -StagingDirectory $stagingDirectory
 
     $installed = 0
-    foreach ($component in '.codex', '.agents', 'AGENTS.md') {
+    foreach ($component in '.codex', '.agents', 'AGENTS.md', 'scripts', 'pricing') {
         if (Read-Confirmation -Prompt "Install $component?" -DefaultYes $true) {
             $result = if ($component -eq '.codex') {
                 Install-Component -Name $component -TargetDirectory $targetDirectory -SourcePath $stagedCodex
@@ -344,7 +344,7 @@ try {
 
     [Console]::WriteLine()
     [Console]::WriteLine("Setup complete. $installed component(s) installed in $targetDirectory (plan: $plan).")
-    [Console]::WriteLine('See guides/ for optional Codex model and Fast-mode configurations.')
+    [Console]::WriteLine('See guides/ for optional Codex model and routing configurations.')
 }
 catch {
     [Console]::Error.WriteLine("Setup cancelled: $($_.Exception.Message)")

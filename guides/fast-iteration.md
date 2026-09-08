@@ -1,7 +1,7 @@
 # Fast Iteration
 
-Choose this preset when latency matters and you want Astra to orchestrate
-quickly with Luna subagents.
+Choose this preset when latency matters and you want a fast Astra root while
+bounded subagents are routed dynamically by capability.
 
 Add or merge this into:
 
